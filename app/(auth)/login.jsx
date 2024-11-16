@@ -1,5 +1,3 @@
-// components/SignIn.jsx
-
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
@@ -8,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSession } from '../../utils/AuthContext';
 import { ThemedView } from '../../components/ThemedView';
@@ -22,9 +21,19 @@ export default function Login() {
   const router = useRouter();
   const dispatch = useDispatch();
 
-  const [email, setEmail] = useState('');
+  const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateEmail = (email) => {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
+    return emailPattern.test(email);
+  };
+
+  const validatePhoneNumber = (phone) => {
+    const phonePattern = /^232(31|32|34)\d{6}$/;
+    return phonePattern.test(phone);
+  };
 
   const saveLogin = async (value) => {
     dispatch(login(value));
@@ -34,26 +43,51 @@ export default function Login() {
     dispatch(updateUserDetails(data));
   };
 
+  const validateInput = () => {
+    if (validateEmail(emailOrPhone)) {
+      return 'email';
+    } else if (validatePhoneNumber(emailOrPhone)) {
+      return 'phone';
+    } else {
+      Alert.alert(
+        'Invalid Input',
+        'Please enter a valid email address or phone number in the format 232XXXXXXXX and a Qcell number.'
+      );
+      return null;
+    }
+  };
+
   const handleSignIn = async () => {
+    const inputType = validateInput();
+
+    if (!inputType) {
+      return;
+    }
+
     setIsSubmitting(true);
     const payload = {
-      username: email,
+      username: emailOrPhone,
       password: password,
     };
 
     try {
       const response = await authenticate(payload);
+      console.log("RESSS", response)
       if (response.access_token) {
         saveUserDetails(response);
         saveLogin(true);
-        router.replace('/home'); // Navigate to home on successful sign-in
+        router.replace('/home');
       } else if (response.connectionError) {
-        console.log('Server not reachable. Please check your connection.');
+        Alert.alert(
+          'Connection Error',
+          'Server not reachable. Please check your connection.'
+        );
       } else {
-        console.log(response.description);
+        Alert.alert('Sign In Failed', response.message || 'Unknown error occurred.');
       }
     } catch (err) {
-      console.log('Login failed:', err);
+      Alert.alert('Login Error', 'Login failed. Please try again.');
+      console.error('Login failed:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -65,19 +99,18 @@ export default function Login() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* AppBar for consistent header */}
       <Appbar.Header style={styles.appBar}>
-        <Appbar.Content title="Welcome Back!" subtitle="Sign in to continue" />
+        <Appbar.Content title="Welcome Back!" />
       </Appbar.Header>
 
       <View style={styles.form}>
-        <ThemedText style={styles.title}>Sign In</ThemedText>
+        <ThemedText style={styles.title}>Client Sign In</ThemedText>
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
+          placeholder="Email or Phone Number"
+          value={emailOrPhone}
+          onChangeText={setEmailOrPhone}
           autoCapitalize="none"
           keyboardType="email-address"
           textContentType="emailAddress"
@@ -106,7 +139,6 @@ export default function Login() {
           )}
         </TouchableOpacity>
 
-        {/* Link to the Register screen */}
         <TouchableOpacity onPress={navigateToRegister} style={styles.registerLink}>
           <ThemedText style={styles.registerText}>
             Don't have an account? Register here
@@ -117,15 +149,14 @@ export default function Login() {
   );
 }
 
-const primaryColor = '#F58F21'; // Your primary color
+const primaryColor = '#F58F21';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // White background for a clean look
   },
   appBar: {
-    backgroundColor: primaryColor, // Use primary color for header
+    backgroundColor: primaryColor,
   },
   form: {
     flex: 1,
@@ -137,17 +168,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 20,
-    color: '#333333', // Dark text color for contrast
   },
   input: {
-    backgroundColor: '#FFFFFF',
     padding: 14,
     borderRadius: 8,
     marginBottom: 16,
     fontSize: 16,
     borderColor: '#DDDDDD',
     borderWidth: 1,
-    color: '#333333',
+    color: '#DDDDDD',
   },
   signInButton: {
     backgroundColor: primaryColor,
@@ -170,4 +199,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-
